@@ -1,0 +1,46 @@
+[project]
+name = "connect4"
+version = "0.1.0"
+authors = [
+  { name = "Tech4bueno", email = "164949278+tech4bueno@users.noreply.github.com" },
+]
+description = "A two player browser-based game of Connect 4 with optional solver hints"
+requires-python = ">=3.8"
+dependencies = [
+    "aiohttp>=3.8.0",
+]
+license = {text = "MIT"}
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+[project.scripts]
+connect4 = "connect4:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+include = [
+    "7x6.book",
+    "c4solver",
+    "static/index.html"
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov=connect4 --cov-report=term-missing --cov-report=html"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["connect4"]
+omit = [
+    "*/__init__.py",
+]

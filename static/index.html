@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect 4</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div x-data="connect4Game()" class="container mx-auto px-4 py-8">
+        <!-- Registration Form -->
+        <div x-show="!isConnected" class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Join Game</h2>
+            <form @submit.prevent="register">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Your Name</label>
+                    <input type="text" x-model="playerName" class="w-full px-3 py-2 border rounded-lg" required>
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="wantsHints" class="mr-2">
+                        <span class="text-gray-700">Enable solver hints</span>
+                    </label>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">
+                    Join Game
+                </button>
+            </form>
+        </div>
+
+        <!-- Waiting Screen -->
+        <div x-show="isWaiting" class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+            <p class="text-lg">Waiting for opponent...</p>
+        </div>
+
+        <!-- Game Board -->
+        <div x-show="gameState && !isWaiting" class="max-w-2xl mx-auto">
+            <!-- Game Info -->
+            <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="font-semibold">Player 1:</span>
+                        <span x-text="gameState.player1_name"
+                              :class="{'text-blue-500 font-bold': isCurrentPlayer(gameState.player1)}"></span>
+                    </div>
+                    <div>
+                        <span class="font-semibold">Player 2:</span>
+                        <span x-text="gameState.player2_name"
+                              :class="{'text-blue-500 font-bold': isCurrentPlayer(gameState.player2)}"></span>
+                    </div>
+                </div>
+                <div x-show="gameState.status === 'finished'" class="mt-2 text-center text-lg font-bold text-green-500">
+                    Game Over! Winner: <span x-text="getWinnerName()"></span>
+                </div>
+                <div x-show="gameState.status === 'draw'" class="mt-2 text-center text-lg font-bold text-yellow-500">
+                    Game Over! It's a draw!
+                </div>
+            </div>
+
+            <!-- Solver Hints -->
+            <div x-show="currentHint && isMyTurn()" class="bg-white rounded-lg shadow-md p-4 mb-4">
+                <h3 class="font-bold mb-2">Solver Hints:</h3>
+                <div class="grid grid-cols-7 gap-2">
+                    <template x-for="(col, index) in currentHint.analysis.columns" :key="index">
+                        <div class="text-center">
+                            <div x-show="col.valid" 
+                                 x-text="col.score"
+                                 :class="{
+                                    'text-green-500': col.score > 0,
+                                    'text-yellow-500': col.score === 0,
+                                    'text-red-500': col.score < 0
+                                 }"></div>
+                            <div x-show="!col.valid" class="text-gray-400">-</div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Board -->
+            <div class="bg-blue-700 rounded-lg p-4">
+                <div class="grid grid-cols-7 gap-2">
+                    <!-- Column Buttons -->
+                    <template x-for="col in 7" :key="'btn-' + col">
+                        <button @click="makeMove(col - 1)"
+                                :disabled="!canMakeMove(col - 1)"
+                                class="w-full py-2 rounded bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white">
+                            ↓
+                        </button>
+                    </template>
+                    
+                    <!-- Board Cells -->
+                    <template x-for="row in 6" :key="'row-' + row">
+                        <template x-for="col in 7" :key="'cell-' + row + '-' + col">
+                            <div class="aspect-w-1 aspect-h-1">
+                                <div class="w-full pt-[100%] relative">
+                                    <div class="absolute inset-1 rounded-full"
+                                         :class="{
+                                             'bg-white': getCellValue(5 - (row - 1), col - 1) === 0,
+                                             'bg-red-500': getCellValue(5 - (row - 1), col - 1) === 1,
+                                             'bg-yellow-500': getCellValue(5 - (row - 1), col - 1) === 2,
+                                         }">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function connect4Game() {
+            return {
+                ws: null,
+                isConnected: false,
+                isWaiting: false,
+                playerName: '',
+                wantsHints: false,
+                playerId: null,
+                gameState: null,
+                currentHint: null,
+
+                init() {
+                    this.connectWebSocket();
+                },
+
+                connectWebSocket() {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const hostname = window.location.hostname;
+                    this.ws = new WebSocket(`${protocol}//${hostname}/ws`);
+                    
+                    this.ws.onmessage = (event) => {
+                        const message = JSON.parse(event.data);
+                        
+                        switch (message.type) {
+                            case 'waiting':
+                                this.isWaiting = true;
+                                break;
+                            
+                            case 'game_state':
+                                this.gameState = message.state;
+                                this.isWaiting = false;
+                                break;
+                            
+                            case 'hint':
+                                this.currentHint = message.analysis;
+                                break;
+                            
+                            case 'error':
+                                alert(message.message);
+                                break;
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        this.isConnected = false;
+                        this.gameState = null;
+                        this.currentHint = null;
+                        // Attempt to reconnect after a delay
+                        setTimeout(() => this.connectWebSocket(), 5000);
+                    };
+                },
+
+                register() {
+                    if (this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({
+                            type: 'register',
+                            name: this.playerName,
+                            wants_hints: this.wantsHints
+                        }));
+                        this.isConnected = true;
+                    }
+                },
+
+                makeMove(column) {
+                    if (this.ws.readyState === WebSocket.OPEN && this.isMyTurn()) {
+                        this.ws.send(JSON.stringify({
+                            type: 'move',
+                            column: column
+                        }));
+                    }
+                },
+
+                getCellValue(row, col) {
+                    return this.gameState?.board[row][col] || 0;
+                },
+
+                isMyTurn() {
+                    return this.gameState?.status === 'active' && 
+                           this.isCurrentPlayer(this.gameState?.current_turn);
+                },
+
+                isCurrentPlayer(playerId) {
+                    return this.gameState?.current_turn === playerId;
+                },
+
+                canMakeMove(column) {
+                    return this.isMyTurn() && 
+                           this.gameState?.board[0][column] === 0 &&
+                           this.gameState?.status === 'active';
+                },
+
+                getWinnerName() {
+                    if (!this.gameState?.winner) return '';
+                    return this.gameState.winner === this.gameState.player1 
+                        ? this.gameState.player1_name 
+                        : this.gameState.player2_name;
+                }
+            };
+        }
+    </script>
+</body>
+</html>

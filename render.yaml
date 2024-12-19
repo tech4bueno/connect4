@@ -1,0 +1,10 @@
+services:
+- type: web
+  name: connect4
+  runtime: docker
+  repo: https://github.com/tech4bueno/connect4
+  plan: free
+  region: frankfurt
+  dockerContext: .
+  dockerfilePath: ./Dockerfile
+version: "1"
