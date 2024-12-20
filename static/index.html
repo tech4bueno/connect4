@@ -42,19 +42,19 @@
                 <div class="flex justify-between items-center">
                     <div>
                         <span class="font-semibold">Player 1:</span>
-                        <span x-text="gameState.player1_name"
-                              :class="{'text-blue-500 font-bold': isCurrentPlayer(gameState.player1)}"></span>
+                        <span x-text="gameState?.player1_name"
+                              :class="{'text-blue-500 font-bold': isCurrentPlayer(gameState?.player1)}"></span>
                     </div>
                     <div>
                         <span class="font-semibold">Player 2:</span>
-                        <span x-text="gameState.player2_name"
-                              :class="{'text-blue-500 font-bold': isCurrentPlayer(gameState.player2)}"></span>
+                        <span x-text="gameState?.player2_name"
+                              :class="{'text-blue-500 font-bold': isCurrentPlayer(gameState?.player2)}"></span>
                     </div>
                 </div>
-                <div x-show="gameState.status === 'finished'" class="mt-2 text-center text-lg font-bold text-green-500">
+                <div x-show="gameState?.status === 'finished'" class="mt-2 text-center text-lg font-bold text-green-500">
                     Game Over! Winner: <span x-text="getWinnerName()"></span>
                 </div>
-                <div x-show="gameState.status === 'draw'" class="mt-2 text-center text-lg font-bold text-yellow-500">
+                <div x-show="gameState?.status === 'draw'" class="mt-2 text-center text-lg font-bold text-yellow-500">
                     Game Over! It's a draw!
                 </div>
             </div>
@@ -63,7 +63,7 @@
             <div x-show="currentHint && isMyTurn()" class="bg-white rounded-lg shadow-md p-4 mb-4">
                 <h3 class="font-bold mb-2">Solver Hints:</h3>
                 <div class="grid grid-cols-7 gap-2">
-                    <template x-for="(col, index) in currentHint.analysis.columns" :key="index">
+                    <template x-for="(col, index) in currentHint?.analysis.columns" :key="index">
                         <div class="text-center">
                             <div x-show="col.valid" 
                                  x-text="col.score"
@@ -129,8 +129,8 @@
 
                 connectWebSocket() {
                     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                    const hostname = window.location.hostname;
-                    this.ws = new WebSocket(`${protocol}//${hostname}/ws`);
+                    const host = window.location.host;
+                    this.ws = new WebSocket(`${protocol}//${host}/ws`);
                     
                     this.ws.onmessage = (event) => {
                         const message = JSON.parse(event.data);

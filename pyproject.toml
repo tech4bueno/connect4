@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = [
   { name = "Tech4bueno", email = "164949278+tech4bueno@users.noreply.github.com" },
 ]
-description = "A two player browser-based game of Connect 4 with optional solver hints"
+description = "A two player browser-based game of Connect 4 with 'perfect gameplay' hints available"
 requires-python = ">=3.8"
 dependencies = [
     "aiohttp>=3.8.0",

@@ -1,6 +1,6 @@
 # Connect 4
 
-A game of Connect 4 with optional hints enabling perfect gameplay.
+A 2 player browser-based game of Connect 4 with optional hints to enable 'perfect gameplay'.
 
 Solver courtesy of [Pascal Pons](https://github.com/PascalPons/connect4)
 
