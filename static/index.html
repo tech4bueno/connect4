@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect 4</title>
-    <script src="//unpkg.com/alpinejs" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.js" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -67,11 +67,8 @@
                         <div class="text-center">
                             <div x-show="col.valid" 
                                  x-text="formatScore(col.score)"
-                                 :class="{
-                                    'text-green-500': col.score > 0,
-                                    'text-yellow-500': col.score === 0,
-                                    'text-red-500': col.score < 0
-                                 }"></div>
+                                 :style="getScoreColor(col.score, currentHint?.analysis.columns)"
+                                 class="font-medium"></div>
                             <div x-show="!col.valid" class="text-gray-400">-</div>
                         </div>
                     </template>
@@ -226,6 +223,55 @@
                     return this.gameState.winner === this.gameState.player1 
                         ? this.gameState.player1_name 
                         : this.gameState.player2_name;
+                },
+
+                getScoreColor(score, allColumns) {
+                    // Ensure allColumns is an array and get valid scores
+                    const columns = Object.values(allColumns || {});
+                    const validScores = columns
+                        .filter(col => col?.valid)
+                        .map(col => col.score);
+                    
+                    if (validScores.length === 0) return '';
+                    
+                    // Find min and max scores
+                    const minScore = Math.min(...validScores);
+                    const maxScore = Math.max(...validScores);
+                    
+                    // If all scores are equal, use a neutral color
+                    if (minScore === maxScore) {
+                        return 'color: #808080';
+                    }
+                    
+                    // Calculate relative position between min and max (0 to 1)
+                    // Best available move will be 1, worst will be 0
+                    const normalizedScore = (score - minScore) / (maxScore - minScore);
+                    
+                    // Color interpolation
+                    const red = {r: 239, g: 68, b: 68};    // text-red-500
+                    const amber = {r: 245, g: 158, b: 11}; // text-amber-500
+                    const green = {r: 34, g: 197, b: 94};  // text-green-500
+                    
+                    let color;
+                    if (normalizedScore <= 0.5) {
+                        // Interpolate between red and amber
+                        const t = normalizedScore * 2;
+                        color = {
+                            r: Math.round(red.r + (amber.r - red.r) * t),
+                            g: Math.round(red.g + (amber.g - red.g) * t),
+                            b: Math.round(red.b + (amber.b - red.b) * t)
+                        };
+                    } else {
+                        // Interpolate between amber and green
+                        const t = (normalizedScore - 0.5) * 2;
+                        color = {
+                            r: Math.round(amber.r + (green.r - amber.r) * t),
+                            g: Math.round(amber.g + (green.g - amber.g) * t),
+                            b: Math.round(amber.b + (green.b - amber.b) * t)
+                        };
+                    }
+                    
+                    return `color: rgb(${color.r}, ${color.g}, ${color.b})`;
                 }
             };
         }
