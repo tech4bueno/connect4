@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect 4</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.js" defer></script>
+    <script src="//unpkg.com/alpinejs" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -66,7 +66,7 @@
                     <template x-for="(col, index) in currentHint?.analysis.columns" :key="index">
                         <div class="text-center">
                             <div x-show="col.valid" 
-                                 x-text="col.score"
+                                 x-text="formatScore(col.score)"
                                  :class="{
                                     'text-green-500': col.score > 0,
                                     'text-yellow-500': col.score === 0,
@@ -127,6 +127,25 @@
                     this.connectWebSocket();
                 },
 
+                formatScore(score) {
+                    if (score === 0) return 'D';
+                    
+                    // Count stones already played
+                    const stonesPlayed = this.gameState.board.flat().filter(cell => cell !== 0).length;
+                    
+                    if (score > 0) {
+                        // For wins: 22 - score = total moves to win from start
+                        // Subtract stones already played to get remaining moves
+                        const movesToWin = (22 - score) - Math.floor(stonesPlayed / 2);
+                        return `W${movesToWin}`;
+                    } else {
+                        // For losses: abs(score) - 22 = -(total moves to lose from start)
+                        // Subtract stones already played to get remaining moves
+                        const movesToLose = (22 - Math.abs(score)) - Math.floor((stonesPlayed + 1) / 2);
+                        return `L${movesToLose}`;
+                    }
+                },
+
                 connectWebSocket() {
                     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                     const host = window.location.host;
@@ -159,7 +178,6 @@
                         this.isConnected = false;
                         this.gameState = null;
                         this.currentHint = null;
-                        // Attempt to reconnect after a delay
                         setTimeout(() => this.connectWebSocket(), 5000);
                     };
                 },
